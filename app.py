@@ -47,6 +47,7 @@ def streamlit_app():
         st.write('This app helps you search for recipes based on the highly rated recipes.')
         st.write('The app returns the top rated recipes')
         st.write('It uses a machine learning model to recommend recipes based on your input.')
+        st.write('Search term helps to search for a particular recipe and it return that specific recipe')
     elif page == 'Results':
         st.title('Recipe Search Results')
 
@@ -70,11 +71,26 @@ def streamlit_app():
 
         # Add text inputs for entering user ID and recipe name
         user_id = st.text_input('Enter User ID:')
-        recipe_name = st.text_input('Enter Recipe Name:')
         search_term = st.text_input('Enter Search Term:')
         search_button = st.button('Search')
-        # Get recommendations for the user
-        if user_id and recipe_name:
+
+        # Filter recipes based on search term and display only the first result
+        if search_term and search_button:
+            filtered_recipes = df[df['recipe_name'].str.contains(search_term, case=False)].sample(2)
+            if not filtered_recipes.empty:
+                num_samples=min(4,len(filtered_recipes))
+                filtered_recipe=filtered_recipes.sample(num_samples)
+                st.markdown(f"**Search Result for {search_term}**")
+                for index, row in filtered_recipes.iterrows():
+                    st.markdown(f"<span style='color: #FFD700'><strong>Recipe Name:</strong></span> {row['recipe_name']}", unsafe_allow_html=True)
+                    st.write(f"<span style='color: #00FF00'><strong>Predicted Rating:</strong></span> {row['ratings']}", unsafe_allow_html=True)
+                    st.markdown(f"<span style='color: #FFA07A'><strong>Ingredients:</strong></span> {row['ingredients']}", unsafe_allow_html=True)
+                    st.markdown(f"<span style='color: #87CEEB'><strong>Cooking Instructions:</strong></span> {row['cooking_instructions']}", unsafe_allow_html=True)
+            else:
+                st.write("No recipes found for the search term.")
+
+        recipe_name = st.text_input('Enter Recipe Name For Recommendation:')
+        if recipe_name and user_id:
             recommended_recipe = get_recommendations(int(user_id), df, recipe_name)
             if not recommended_recipe:
                 # Use OpenAI to generate response for unknown recipe names
@@ -91,6 +107,7 @@ def streamlit_app():
                 st.markdown("**Ingredients:** Not available")
                 st.markdown("**Cooking Instructions:** Not available")
             else:
+                st.markdown(f"**Recommendations for {recipe_name}**")
                 for recipe_code, predicted_rating in recommended_recipe[:20]:
                     recipe_name = df[df['recipe_code'] == recipe_code]['recipe_name'].iloc[0]
                     ingredients = df[df['recipe_code'] == recipe_code]['ingredients'].iloc[0]
@@ -106,18 +123,6 @@ def streamlit_app():
                         st.write(f"<span style='color: #00FF00'><strong>Predicted Rating:</strong></span> {predicted_rating}", unsafe_allow_html=True)
                         st.markdown(f"<span style='color: #FFA07A'><strong>Ingredients:</strong></span> {ingredients}", unsafe_allow_html=True)
                         st.markdown("<span style='color: #87CEEB'><strong>Cooking Instructions:</strong></span> Not available", unsafe_allow_html=True)
-
-        # Filter recipes based on search term and display only the first result
-        #search_term = st.text_input('Enter Search Term:')
-        if search_term:
-            filtered_recipe = df[df['recipe_name'].str.contains(search_term, case=False)].head(1)
-            if not filtered_recipe.empty:
-                st.markdown(f"**Search Result for {search_term}**")
-                for index, row in filtered_recipe.iterrows():
-                    st.markdown(f"<span style='color: #FFD700'><strong>Recipe Name:</strong></span> {row['recipe_name']}", unsafe_allow_html=True)
-                    st.write(f"<span style='color: #00FF00'><strong>Predicted Rating:</strong></span> {row['ratings']}", unsafe_allow_html=True)
-                    st.markdown(f"<span style='color: #FFA07A'><strong>Ingredients:</strong></span> {row['ingredients']}", unsafe_allow_html=True)
-                    st.markdown(f"<span style='color: #87CEEB'><strong>Cooking Instructions:</strong></span> {row['cooking_instructions']}", unsafe_allow_html=True)
 
 # Run the Streamlit app
 if __name__ == "__main__":
